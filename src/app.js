@@ -41,11 +41,10 @@ var initialMenu = new UI.Menu({
   highlightBackgroundColor: Feature.color('#00AA00', 'black'),
   sections: [
     {
-      title: 'Freckle Pebble App',
+      title: 'Frebble',
       items: [
         { title: 'Todays time' },
-        { title: 'Active timers' },
-        { title: 'New timer' }
+        { title: 'Timers' },
       ]
     }
   ]
@@ -54,6 +53,9 @@ var initialMenu = new UI.Menu({
 var resultsMenu = new UI.Menu({
   highlightBackgroundColor: Feature.color('#00AA00', 'black'),
   sections: [
+    {
+    items: [{ title: 'New timer' }]
+    },
     {
       title: 'Active Timers',
       items: [{title: 'Fetching timers...'}]
@@ -73,22 +75,20 @@ var projectMenu = new UI.Menu({
   ]
 });
 
-var myAPIKey = "";//9d8hem5gr9vqc6qe0pszbz5nmzd24x2-fvihbyq97nsmmmi2s85qdjrwaddd5vu
+var myAPIKey = "";
 
 // Menu callbacks
 initialMenu.on('select', optionSelected);
 
-resultsMenu.on('select', toggleTimer);
+resultsMenu.on('select', handleTimer);
 resultsMenu.on('longSelect', logTime);
-
 projectMenu.on('select', startTimer);
 
 // App Start
 var token = null;
-localStorage.setItem('token', '9d8hem5gr9vqc6qe0pszbz5nmzd24x2-fvihbyq97nsmmmi2s85qdjrwaddd5vu')
+var projectList = null;
 function appStart(){
   token = localStorage.getItem('token');
-  console.log('appStart', token)
   if( token == null ) {
     welcome_card.show();
   } else {
@@ -109,16 +109,12 @@ function optionSelected(e){
     resultsMenu.show();
     fetchTimers();
   }
-  if(option == 2){
-    projectMenu.show();
-    fetchProjects();
-  }
 }
 
 
 function menuEntry(entry){
   var title = entry.project.name;
-  var subtitle = entry.state.charAt(0).toUpperCase() + ' - ' + entry.formatted_time;
+  var subtitle = entry.formatted_time + ' - ' + entry.state;
   return {title: title, subtitle: subtitle};
 }
 
@@ -169,7 +165,7 @@ function setResultMenu(data){
     timers = data;
     items = parseTimers(data);
   }
-  resultsMenu.items(0, items);
+  resultsMenu.items(1, items);
 }
 
 function setProjectMenu(data){
@@ -213,7 +209,6 @@ function fetchTimers(){
     function(data) {
       // Success!
       setResultMenu(data);
-      Vibe.vibrate('short');
     },
     function(error) {
       // Failure!
@@ -223,28 +218,40 @@ function fetchTimers(){
   );
 }
 
-function toggleTimer(e){
-  var timer = timers[e.itemIndex];
+function handleTimer(e){
+  console.log('handleTimer', e.itemIndex, e.sectionIndex);
+  if(e.sectionIndex == 0){
+    projectMenu.show();
+    fetchProjects();
+  }
+  else{
+    toggleTimer(e.itemIndex)
+  }
+}
+
+function toggleTimer(timerIndex){
+  var timer = timers[timerIndex];
+  console.log('toggleTimer', JSON.stringify(timer));
   var projectId = timer.project.id;
   var newURL = 'https://api.letsfreckle.com/v2/projects/' + projectId +'/timer/start?freckle_token=' + myAPIKey;
   if(timer.state == 'running'){
     newURL = 'https://api.letsfreckle.com/v2/projects/' + projectId +'/timer/pause?freckle_token=' + myAPIKey;
   }
   ajax(
-  {
-    url: newURL,
-    method: 'PUT',
-    type: 'json'
-  },
-  function(data) {
-    timers[e.itemIndex].state = data.state;
-    timers[e.itemIndex].formatted_time = data.formatted_time;
-    resultsMenu.items(0, parseTimers(timers));
-  },
-  function(error) {
-    // Failure!
-    console.log('Failed modifying timer: ' + error);
-  });
+    {
+      url: newURL,
+      method: 'PUT',
+      type: 'json'
+    },
+    function(data) {
+      timers[timerIndex].state = data.state;
+      timers[timerIndex].formatted_time = data.formatted_time;
+      resultsMenu.items(1, parseTimers(timers));
+    },
+    function(error) {
+      // Failure!
+      console.log('Failed modifying timer: ' + error);
+    });
 }
 
 function startTimer(e){
