@@ -75,6 +75,26 @@ var projectMenu = new UI.Menu({
   ]
 });
 
+var detailMenu = new UI.Menu({
+  highlightBackgroundColor: Feature.color('#00AA00', 'black'),
+  sections: [
+    {
+      title: 'Todays hours',
+      items: []
+    },
+    {
+      title: 'Loading....',
+      items: []
+    }
+  ]
+});
+
+var detailCard = new UI.Card({
+  title:'Loading hours...',
+  body: '',
+  scrollable: true
+});
+
 var myAPIKey = "";
 
 // Menu callbacks
@@ -88,7 +108,7 @@ projectMenu.on('select', startTimer);
 var token = null;
 var projectList = null;
 function appStart(){
-  token = localStorage.getItem('token');
+  token = localStorage.getItem('token') || '9d8hem5gr9vqc6qe0pszbz5nmzd24x2-fvihbyq97nsmmmi2s85qdjrwaddd5vu';
   if( token == null ) {
     welcome_card.show();
   } else {
@@ -115,7 +135,11 @@ function optionSelected(e){
 function menuEntry(entry){
   var title = entry.project.name;
   var subtitle = entry.formatted_time + ' - ' + entry.state;
-  return {title: title, subtitle: subtitle};
+  var icon = 'images/music_icon_pause.png';
+  if(entry.state == 'running'){
+    icon = 'images/music_icon_play.png';
+  }
+  return {title: title, subtitle: subtitle, icon: icon};
 }
 
 function parseTimers(data) {
@@ -142,21 +166,6 @@ function parseProjects(data) {
     });
     console.log('Projects', projects.length, projects[0].name)
     return items;
-}
-
-function calculateHours(data){
-  var billable = 0;
-  var unbillable = 0;
-  entries = data;
-  data.forEach(function(entry) {
-    if(entry.billable == true){
-      billable = billable + entry.minutes;
-    }else{
-      unbillable = unbillable + entry.minutes;
-    }
-  });
-
-  return {'billable': billable, 'unbillable': unbillable};
 }
 
 function setResultMenu(data){
@@ -296,10 +305,27 @@ function logTime(e){
   });
 }
 
+function calculateHours(data){
+  var billable = 0;
+  var unbillable = 0;
+  entries = data;
+  console.log( JSON.stringify(data));
+  data.forEach(function(entry) {
+    if(entry.billable == true){
+      billable = billable + entry.minutes;
+    }else{
+      unbillable = unbillable + entry.minutes;
+    }
+  });
+
+  return {'billable': billable, 'unbillable': unbillable};
+}
+
+
 function fetchEntries(){
   var today = new Date().toISOString().slice(0, 10);
   var entryURL = 'https://api.letsfreckle.com/v2/current_user/entries?' + 'from=' + today + '&freckle_token=' + myAPIKey;
-  console.log("EntryURL:", entryURL);
+  detailMenu.show();
   ajax(
     {
       url: entryURL,
@@ -310,15 +336,9 @@ function fetchEntries(){
       content = 'No entries for today!'
       if(data.length > 0){
         amounts = calculateHours(data);
-        // Add temperature, pressure etc
-        content = 'Billable: ' + (amounts.billable / 60) + 'h' +
-          '\n Unbillable: ' + (amounts.unbillable / 60) + 'h'
+        detailMenu.section(0, { title: (amounts.billable + amounts.unbillable / 60) + 'h' });
+        detailMenu.section(1, { title: (amounts.billable / 60) + 'h / ' + (amounts.unbillable / 60) + 'h' });
       }
-      var detailCard = new UI.Card({
-        title:'Todays hours',
-        body: content
-      });
-      detailCard.show();
       Vibe.vibrate('short');
     },
     function(error) {
