@@ -43,8 +43,8 @@ var initialMenu = new UI.Menu({
     {
       title: 'Frebble',
       items: [
-        { title: 'Todays time' },
-        { title: 'Timers' },
+        { title: 'Todays time', icon: 'images/today.png' },
+        { title: 'Timers', icon: 'images/timer.png' },
       ]
     }
   ]
@@ -80,19 +80,9 @@ var detailMenu = new UI.Menu({
   sections: [
     {
       title: 'Todays hours',
-      items: []
-    },
-    {
-      title: 'Loading....',
-      items: []
+      items: [{title: 'Loading...'}]
     }
   ]
-});
-
-var detailCard = new UI.Card({
-  title:'Loading hours...',
-  body: '',
-  scrollable: true
 });
 
 var myAPIKey = "";
@@ -255,6 +245,7 @@ function toggleTimer(timerIndex){
     function(data) {
       timers[timerIndex].state = data.state;
       timers[timerIndex].formatted_time = data.formatted_time;
+      resultsMenu.highlightBackgroundColor(data.project.color);
       resultsMenu.items(1, parseTimers(timers));
     },
     function(error) {
@@ -308,6 +299,7 @@ function logTime(e){
 function calculateHours(data){
   var billable = 0;
   var unbillable = 0;
+  var menu = []
   entries = data;
   console.log( JSON.stringify(data));
   data.forEach(function(entry) {
@@ -316,9 +308,10 @@ function calculateHours(data){
     }else{
       unbillable = unbillable + entry.minutes;
     }
+    menu.push({title: ((entry.minutes / 60) + 'h ' + entry.project.name), subtitle: entry.description})
   });
 
-  return {'billable': billable, 'unbillable': unbillable};
+  return {billable: billable, unbillable: unbillable, menu: menu};
 }
 
 
@@ -336,8 +329,10 @@ function fetchEntries(){
       content = 'No entries for today!'
       if(data.length > 0){
         amounts = calculateHours(data);
-        detailMenu.section(0, { title: (amounts.billable + amounts.unbillable / 60) + 'h' });
-        detailMenu.section(1, { title: (amounts.billable / 60) + 'h / ' + (amounts.unbillable / 60) + 'h' });
+        detailMenu.section(0, { title: ((amounts.billable + amounts.unbillable) / 60) + 'h Today' });
+        detailMenu.items(0, [{ title: 'Billable: ' + (amounts.billable / 60) + 'h',  subtitle: 'Unbillable: ' + (amounts.unbillable / 60) + 'h' }]);
+        detailMenu.section(1, { title: 'Your entries' });
+        detailMenu.items(1, amounts.menu);
       }
       Vibe.vibrate('short');
     },
