@@ -98,7 +98,7 @@ projectMenu.on('select', startTimer);
 var token = null;
 var projectList = null;
 function appStart(){
-  token = localStorage.getItem('token') || '9d8hem5gr9vqc6qe0pszbz5nmzd24x2-fvihbyq97nsmmmi2s85qdjrwaddd5vu';
+  token = localStorage.getItem('token');
   if( token == null ) {
     welcome_card.show();
   } else {
@@ -245,7 +245,6 @@ function toggleTimer(timerIndex){
     function(data) {
       timers[timerIndex].state = data.state;
       timers[timerIndex].formatted_time = data.formatted_time;
-      resultsMenu.highlightBackgroundColor(data.project.color);
       resultsMenu.items(1, parseTimers(timers));
     },
     function(error) {
